@@ -1,7 +1,8 @@
+##this is a test of Git with this IDE
 '''
 vcf-consensus
 
-import vcf with vcf reader from pysan
+import vcf with vcf reader from pysam
 
 for each locus in vcf, check that reference allele matches reference
 
