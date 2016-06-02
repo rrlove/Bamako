@@ -16,6 +16,28 @@ write consensus sequence
 
 #!/usr/bin/env python
 
+Usage = """
+vcf-consensus.py - Becca Love, 2 June 2016
+
+Take a VCF file and a reference genome, and construct a consensus sequence from a particular sample with sensitivity to read counts. For example, a SNP called as a heterozygote with reference/alternate read counts of 6/4 is more likely to be incorporated into the reference sequence than a SNP called as 10/3.
+
+Importantly, this is a stochastic process and the same consensus sequence will not be constructed each time from the same sample and reference genome.
+
+This was designed for use with VCFs from pooled data, where read counts may be much higher.
+
+Optionally, the SNPs may be filtered during this process by passing the argument -q with a minimum site quality, corresponding to field 6 of the VCF.
+
+Currently, this script only works on biallelic sites.
+
+Usage:
+        vcf-consensus.py -v vcf -o outprefix -s sample -r reference -q min_SNP_quality
+        
+Depends:
+        Biopython https://biopython.org/DIST/docs/tutorial/Tutorial.html
+        vcf/pysam https://pysam.readthedocs.io/en/latest/api.html
+
+"""
+
 import argparse
 from Bio import Seq
 from Bio import SeqIO
@@ -23,15 +45,19 @@ import random
 import unittest
 import vcf
 
-parser = argparse.ArgumentParser(description="Generate a consensus sequence from one or more samples in a VCF file, taking into account minor allele frequencies")
+parser = argparse.ArgumentParser(description="Generate a consensus sequence from one or more samples in a VCF file, taking into account minor allele frequencies.")
 
-parser.add_argument('-v','--vcf', action="store", dest="vcfname", type=str, help='vcf file used to generate consensus sequence', required=True)
-parser.add_argument('-o','--output', action="store", dest="outbase", type=str, help='prefix for output files', required=True)##to-do: make this not required, but default is sample name
-parser.add_argument('-s','--sample', action="store", dest="samplelist", type=str, help='1 sample for which to generate a consensus', required=True)
-parser.add_argument('-r','--reference', action="store", dest="reference", type=str, help='the reference sequence against which the VCF file was generated', required=True)
-parser.add_argument('-q','--quality',action="store",dest="reference", type=float, help='minimum quality for considering a locus')##to-do: implement default
+parser.add_argument('-v','--vcf', action="store", dest="vcfname", type=str, help='VCF file used to generate consensus sequence. Required.', required=True)
+parser.add_argument('-o','--output', action="store", dest="outbase", type=str, help='Prefix for output files. If no prefix is provided, the sample name specified is used.')##note below, default is sample name
+parser.add_argument('-s','--sample', action="store", dest="samplelist", type=str, help='1 sample name for which to generate a consensus. Required.', required=True)
+parser.add_argument('-r','--reference', action="store", dest="reference", type=str, help='The reference sequence against which the VCF file was generated. Required.', required=True)
+parser.add_argument('-q','--quality',action="store",dest="quality", type=float, help='Minimum quality for considering a locus.')##to-do: implement default
+parser.add_argument('-v', '--verbose', help='Run the program with progress messages.')
 
 args = parser.parse_args()
+
+if not args.output:
+    args.output = args.sample
 
 vcf_reader = vcf.Reader(open(args.file,'r'))
 
@@ -48,7 +74,7 @@ except:
 if not args.quality:
     args.quality = 30 * len(vcf_reader.samples)
 
-##make the Seq objects for the modified contigs that wil get written
+##make the Seq objects for the modified contigs that will get written, and a dictionary to hold them
 outContigs = {}
 
 for contig in vcf_reader.contigs.keys():
@@ -68,11 +94,12 @@ for record in vcf_reader:
     assert record.REF == reference[record.CHROM].seq[record.POS-1], "Error: reference and VCF do not match"    ##check this for off-by-one error
     
     ##ignore filtered sites and sites not passing the quality threshold
-    if record.QUAL > args.quality and not record.FILTER:
+    if record.QUAL >= args.quality and not record.FILTER:
     
         altFreq = 0
         cumAlts = 0
         cumReads = 0
+        
         ##generate a random number to which to compare the alternate allele frequency
         testBound = random.uniform(0.0,1.0)
         
@@ -83,8 +110,9 @@ for record in vcf_reader:
                 cumReads += float(sum(record.genotype(sample)["AD"]))
                 ##altFreq += float(record.genotype(sample)["AD"][1])/float(sum(record.genotype(sample)["AD"]))
                 
-            elif len(record.genotype(args.sample)["AD"] > 2):
-                print "Multi-allelic locus at " + record.CHROM + record.POS
+            elif len(record.genotype(args.sample)["AD"] > 2):    ##only biallelic loci are supported
+                print "Skipping multi-allelic locus at " + record.CHROM + record.POS
+                continue
                 ##generate altFreq for multiallelic locus
         
         altFreq = cumAlts/cumReads
@@ -95,3 +123,10 @@ for record in vcf_reader:
             outContigs[record.CHROM].seq += record.REF
         stoppedAt = record.POS+len(record.REF)-1##check this for off-by-one error,account for indels!
         
+        if args.verbosity:
+            print "Finished processing " + record.CHROM + ":" + record.POS
+
+outFile = args.output + ".fasta"
+
+for contigs in outContigs.keys():
+    SeqIO.write(outContigs[contig], outFile, "fasta")
