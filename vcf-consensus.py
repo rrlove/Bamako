@@ -56,7 +56,8 @@ def analyze_locus(record,sample):
     testBound = random.uniform(0.0,1.0)##should I use scipy.random.rand() here again?
     
     if not record.genotype(sample)["AD"]:
-        print "Skipping missing genotype in " + sample + " at " + record.CHROM + ":" + str(record.POS)
+        print "Warning: missing genotype in " + sample + " at " + record.CHROM + ":" + str(record.POS) + "; using reference allele"
+        return record.REF
     
     elif record.genotype(sample)["AD"]:
         
@@ -72,7 +73,7 @@ def analyze_locus(record,sample):
         altFreq = float(cumAlts) / float(cumReads)
     
         if altFreq > testBound:
-            return str(record.ALT)
+            return record.ALT[0]
         elif altFreq <= testBound:
             return record.REF
 
