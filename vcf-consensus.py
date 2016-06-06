@@ -1,4 +1,3 @@
-##this is a test of Git with this IDE
 #!/usr/bin/env python
 
 Usage = """
@@ -69,7 +68,8 @@ def analyze_locus(record,sample):
     
         elif len(record.genotype(sample)["AD"] > 2):    ##only biallelic loci are supported for now
             ##to-do: accommodate multiallelic loci
-            print "Skipping multi-allelic locus at " + record.CHROM + ":" + str(record.POS)
+            print "Skipping multi-allelic locus at " + record.CHROM + ":" + str(record.POS) + "; using reference allele"
+            return record.REF
         
         altFreq = float(cumAlts) / float(cumReads)
     
@@ -97,33 +97,29 @@ if not args.quality:
 outContigs = {}
 
 for contig in vcf_reader.contigs.keys():
-    outContigs[contig] = SeqRecord.SeqRecord("",id=contig,name=contig)
+    outContigs[contig] = reference[contig]
 
-##keep track of where in the reference we last stopped
-stoppedAt = 0
+##keep track of number of variants for troubleshooting and checking
+numberSeen = 0
 
 for record in vcf_reader:
     
-    if record.POS < stoppedAt:##to-do: make sure this catches transition between contigs
-        stoppedAt = 0
-    
-    ##add everything up to the position before the current locus
-    outContigs[record.CHROM] += reference[record.CHROM].seq[stoppedAt:(record.POS-1)]
     ##make sure the reference alleles match in the reference genome and the VCF
     assert record.REF == reference[record.CHROM].seq[record.POS-1].upper(), "Error: reference and VCF do not match"    ##check this for off-by-one error
     
     ##ignore filtered sites and sites not passing the quality threshold
     if record.QUAL >= args.quality and not record.FILTER:
     
-        outContigs[record.CHROM].seq += analyze_locus(record,args.sample)
-        stoppedAt = record.POS+len(record.REF)-1##check this for off-by-one error,account for indels!
+        outContigs[record.CHROM][record.POS-1] = analyze_locus(record,args.sample)
     
     if args.verbosity:
         print "Finished processing " + record.CHROM + ":" + str(record.POS)
         
+    numberSeen += 1
+        
 outFile = args.outbase + ".fasta"
 
-for contigs in outContigs.keys():
-    if outContigs[contig].seq:
-        SeqIO.write(outContigs[contig], outFile, "fasta")
-    print contig
+SeqIO.write(list(outContigs.values()), outFile, "fasta")
+    
+if args.verbosity:
+    print "Saw " + str(numberSeen) + " variants"
