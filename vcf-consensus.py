@@ -28,6 +28,7 @@ Depends:
 import argparse
 from Bio import Seq
 from Bio import SeqIO
+from Bio import SeqRecord
 import random
 import unittest
 import vcf
@@ -36,15 +37,15 @@ parser = argparse.ArgumentParser(description="Generate a consensus sequence from
 
 parser.add_argument('-v','--vcf', action="store", dest="vcfname", type=str, help='VCF file used to generate consensus sequence. Required.', required=True)
 parser.add_argument('-o','--output', action="store", dest="outbase", type=str, help='Prefix for output files. If no prefix is provided, the sample name specified is used.')##note below, default is sample name
-parser.add_argument('-s','--sample', action="store", dest="samplelist", type=str, help='1 sample name for which to generate a consensus. Required.', required=True)
+parser.add_argument('-s','--sample', action="store", dest="sample", type=str, help='1 sample name for which to generate a consensus. Required.', required=True)
 parser.add_argument('-r','--reference', action="store", dest="reference", type=str, help='The reference sequence against which the VCF file was generated. Required.', required=True)
 parser.add_argument('-q','--quality',action="store",dest="quality", type=float, help='Minimum quality for considering a locus.')
-parser.add_argument('-v', '--verbose', help='Run the program with progress messages.')
+parser.add_argument('-x', '--verbose', action="store", dest="verbosity", help='Run the program with progress messages.')
 
 args = parser.parse_args()
 
-if not args.output:
-    args.output = args.sample
+if not args.outbase:
+    args.outbase = args.sample
 
 def analyze_locus(record,sample):
     
@@ -77,7 +78,7 @@ def analyze_locus(record,sample):
         elif altFreq <= testBound:
             return record.REF
 
-vcf_reader = vcf.Reader(open(args.file,'r'))
+vcf_reader = vcf.Reader(open(args.vcfname,'r'))
 
 reference = SeqIO.index(args.reference, "fasta")
 
@@ -96,7 +97,7 @@ if not args.quality:
 outContigs = {}
 
 for contig in vcf_reader.contigs.keys():
-     outContigs[contig] = Seq("")
+    outContigs[contig] = SeqRecord.SeqRecord("",id=contig,name=contig)
 
 ##keep track of where in the reference we last stopped
 stoppedAt = 0
@@ -107,9 +108,9 @@ for record in vcf_reader:
         stoppedAt = 0
     
     ##add everything up to the position before the current locus
-    outContigs[record.CHROM].seq += reference[record.CHROM].seq[stoppedAt:(record.POS-1)]
+    outContigs[record.CHROM] += reference[record.CHROM].seq[stoppedAt:(record.POS-1)]
     ##make sure the reference alleles match in the reference genome and the VCF
-    assert record.REF == reference[record.CHROM].seq[record.POS-1], "Error: reference and VCF do not match"    ##check this for off-by-one error
+    assert record.REF == reference[record.CHROM].seq[record.POS-1].upper(), "Error: reference and VCF do not match"    ##check this for off-by-one error
     
     ##ignore filtered sites and sites not passing the quality threshold
     if record.QUAL >= args.quality and not record.FILTER:
@@ -120,7 +121,9 @@ for record in vcf_reader:
     if args.verbosity:
         print "Finished processing " + record.CHROM + ":" + str(record.POS)
         
-outFile = args.output + ".fasta"
+outFile = args.outbase + ".fasta"
 
 for contigs in outContigs.keys():
-    SeqIO.write(outContigs[contig], outFile, "fasta")
+    if outContigs[contig].seq:
+        SeqIO.write(outContigs[contig], outFile, "fasta")
+    print contig
