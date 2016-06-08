@@ -53,14 +53,13 @@ def analyze_locus(record,sample,verbose=False):
     
     ##generate a random number to which to compare the alternate allele frequency
     testBound = random.uniform(0.0,1.0)##should I use scipy.random.rand() here again?
-    
-    print type(record.genotype(sample)["GT"])
-    if record.genotype(sample)["GT"] == "./.":
-        return record.REF
-        print "not AD or GT is ./. at " + record.CHROM + ":" + str(record.POS)
         
+    if record.genotype(sample)["GT"] == "./.":
+                
         if verbose is True:
             print "Warning: missing genotype in " + sample + " at " + record.CHROM + ":" + str(record.POS) + "; using reference allele"
+            
+        return record.REF
         
     elif record.genotype(sample)["AD"] and record.genotype(sample)["GT"] != "./.":
         
@@ -71,15 +70,17 @@ def analyze_locus(record,sample,verbose=False):
     
         elif len(record.genotype(sample)["AD"] > 2):    ##only biallelic loci are supported for now
             ##to-do: accommodate multiallelic loci
-            return record.REF
             
             if verbose is True:
                 print "Skipping multi-allelic locus at " + record.CHROM + ":" + str(record.POS) + "; using reference allele"
+                
+            return record.REF
         
         altFreq = float(cumAlts) / float(cumReads)
     
         if altFreq > testBound:
             return str(record.ALT[0])
+            
         elif altFreq <= testBound:
             return record.REF
 
