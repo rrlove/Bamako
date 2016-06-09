@@ -11,7 +11,7 @@ This was designed for use with VCFs from pooled data, where read counts may be m
 
 Optionally, the SNPs may be filtered during this process by passing the argument -q with a minimum site quality, corresponding to field 6 of the VCF.
 
-Currently, this script only works on biallelic sites.
+Currently, this script only works on biallelic SNPs.
 
 Usage:
         vcf-consensus.py -v vcf -o outprefix -s sample -r reference -q min_SNP_quality
@@ -25,10 +25,9 @@ Depends:
 ##to-do: implement support for multiple samples in a population
 
 import argparse
+import copy
 import random
-import unittest
 from Bio import SeqIO
-from Bio.Seq import MutableSeq
 import vcf
 
 parser = argparse.ArgumentParser(description="Generate a consensus sequence from one or more samples in a VCF file, taking into account minor allele frequencies.")
@@ -58,7 +57,7 @@ def analyze_locus(record,sample,verbose=False):
                 
         if verbose is True:
             print "Warning: missing genotype in " + sample + " at " + record.CHROM + ":" + str(record.POS) + "; using reference allele"
-            
+        
         return record.REF
         
     elif record.genotype(sample)["AD"] and record.genotype(sample)["GT"] != "./.":
@@ -72,12 +71,12 @@ def analyze_locus(record,sample,verbose=False):
             ##to-do: accommodate multiallelic loci
             
             if verbose is True:
-                print "Skipping multi-allelic locus at " + record.CHROM + ":" + str(record.POS) + "; using reference allele"
-                
+                print "Warning: skipping multi-allelic locus at " + record.CHROM + ":" + str(record.POS) + "; using reference allele"
+            
             return record.REF
         
         altFreq = float(cumAlts) / float(cumReads)
-    
+        
         if altFreq > testBound:
             return str(record.ALT[0])
             
@@ -86,7 +85,7 @@ def analyze_locus(record,sample,verbose=False):
 
 vcf_reader = vcf.Reader(open(args.vcfname,'r'))
 
-reference = SeqIO.index(args.reference, "fasta")
+reference = SeqIO.to_dict(SeqIO.parse(args.reference, "fasta"))
 
 try:
     ##make sure that the reference genome and the supplied VCF file have the same contigs
@@ -99,7 +98,7 @@ except:
 outContigs = {}
 
 for contig in vcf_reader.contigs.keys():
-    outContigs[contig] = reference[contig]
+    outContigs[contig] = copy.copy(reference[contig])
     outContigs[contig].seq = outContigs[contig].seq.tomutable()
 
 ##keep track of number of variants for troubleshooting and checking
@@ -111,8 +110,8 @@ for record in vcf_reader:
     ##make sure the reference alleles match in the reference genome and the VCF
     assert record.REF == reference[record.CHROM].seq[record.POS-1].upper(), "Error: reference and VCF do not match"    ##check this for off-by-one error
     
-    ##ignore filtered sites and sites not passing the quality threshold
-    if record.QUAL >= args.quality and not record.FILTER:
+    ##ignore filtered sites, indels, and sites not passing the quality threshold
+    if record.QUAL >= args.quality and record.is_snp == True and not record.FILTER:
     
         outContigs[record.CHROM].seq[record.POS-1] = analyze_locus(record,args.sample,args.verbose)
         if outContigs[record.CHROM][record.POS-1] != reference[record.CHROM].seq[record.POS-1].upper():
