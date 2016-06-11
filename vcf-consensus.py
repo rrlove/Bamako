@@ -67,7 +67,7 @@ def analyze_locus(record,sample,verbose=False):
             cumAlts += float(record.genotype(sample)["AD"][1])    ##get # reads supporting alternate allele
             cumReads += float(sum(record.genotype(sample)["AD"]))    ##get total # reads
     
-        elif len(record.genotype(sample)["AD"] > 2):    ##only biallelic loci are supported for now
+        elif len(record.genotype(sample)["AD"]) > 2:    ##only biallelic loci are supported for now
             ##to-do: accommodate multiallelic loci
             
             if verbose is True:
@@ -78,6 +78,8 @@ def analyze_locus(record,sample,verbose=False):
         altFreq = float(cumAlts) / float(cumReads)
         
         if altFreq > testBound:
+            print altFreq, testBound
+            print "altFreq > testBound at " + record.CHROM + ":" + str(record.POS)
             return str(record.ALT[0])
             
         elif altFreq <= testBound:
