@@ -14,12 +14,12 @@ inversions <- data.frame(
 
 inversions.func <- function()
   list(
-    geom_rect(data=inversions[inversions$name=="2La",], aes(xmin=start, xmax=end, ymin=-Inf, ymax=Inf), alpha=0.2, fill="#999999"),geom_rect(data=inversions[inversions$name=="2Rj",], aes(xmin=start, xmax=end, ymin=-Inf, ymax=Inf), alpha=0.2, fill="#999999"),geom_rect(data=inversions[inversions$name=="2Rb",], aes(xmin=start, xmax=end, ymin=-Inf, ymax=Inf), alpha=0.2,
+    geom_rect(data=inversions[inversions$name=="2La",], aes(xmin=start, xmax=end, ymin=-Inf, ymax=Inf), alpha=0.3, fill="#999999"),geom_rect(data=inversions[inversions$name=="2Rj",], aes(xmin=start, xmax=end, ymin=-Inf, ymax=Inf), alpha=0.3, fill="#999999"),geom_rect(data=inversions[inversions$name=="2Rb",], aes(xmin=start, xmax=end, ymin=-Inf, ymax=Inf), alpha=0.3,
                                                                                                                                                                                                                                                                             fill="#999999"),geom_vline(data=inversions[inversions$name=="2Rc",], aes(xintercept=start), colour="black", linetype="longdash"),
-    geom_rect(data=inversions[inversions$name=="2Rc",], aes(xmin=start, xmax=end, ymin=-Inf, ymax=Inf), alpha=0.2, fill="#999999"),geom_vline(data=inversions[inversions$name=="2Rc",], aes(xintercept=end), colour="black", linetype="longdash"),geom_rect(data=inversions[inversions$name=="2Ru",], aes(xmin=start, xmax=end, ymin=-Inf, ymax=Inf), alpha=0.2, fill="#999999"))
+    geom_rect(data=inversions[inversions$name=="2Rc",], aes(xmin=start, xmax=end, ymin=-Inf, ymax=Inf), alpha=0.3, fill="#999999"),geom_vline(data=inversions[inversions$name=="2Rc",], aes(xintercept=end), colour="black", linetype="longdash"),geom_rect(data=inversions[inversions$name=="2Ru",], aes(xmin=start, xmax=end, ymin=-Inf, ymax=Inf), alpha=0.3, fill="#999999"))
 
 inversion.labels <- function()
-  list(geom_text(data=inversions[inversions$name=="2La",], aes(x=(start + end)/2, y=0.0045, label="a"), fontface="bold", color="black", size=7), geom_text(data=inversions[inversions$name=="2Rj",], aes(x=(start + end)/2, y=0.0045, label="j"), fontface="bold", color="black", size=5), geom_text(data=inversions[inversions$name=="2Rb",], aes(x=(start + end)/2, y=0.0045, label="b"), fontface="bold", color="black", size=7), geom_text(data=inversions[inversions$name=="2Rc",], aes(x=(start + end)/2, y=0.0045, label="c"), fontface="bold", color="black", size=7), geom_text(data=inversions[inversions$name=="2Ru",], aes(x=(start + end)/2, y=0.0045, label="u"), fontface="bold", color="black", size=7))
+  list(geom_text(data=inversions[inversions$name=="2La",], aes(x=(start + end)/2, y=0.0045, label="a"), fontface="bold", color="black", size=7), geom_text(data=inversions[inversions$name=="2Rj",], aes(x=(start + end)/2, y=0.0045, label="j"), fontface="bold", color="black", size=7), geom_text(data=inversions[inversions$name=="2Rb",], aes(x=(start + end)/2, y=0.0045, label="b"), fontface="bold", color="black", size=7), geom_text(data=inversions[inversions$name=="2Rc",], aes(x=(start + end)/2, y=0.0045, label="c"), fontface="bold", color="black", size=7), geom_text(data=inversions[inversions$name=="2Ru",], aes(x=(start + end)/2, y=0.0045, label="u"), fontface="bold", color="black", size=7))
 
 ##pi
 Bamako.pi <- read.table("Bamako.200.windowed.pi", header=TRUE, col.names=c("chrom","start","end","nvariants.Bamako","pi.Bamako"))
@@ -90,3 +90,12 @@ wfst$widths[2:5] <- as.list(maxWidth)
 pdf(paste("Figure 3.",format(Sys.Date(), "%m%d%y"),".pdf", sep=""), width=22, height=7)
 grid.arrange(wpi, wD, wfst, ncol=1,heights=c(1.2,1,2))
 dev.off()
+
+##postscript polishing in Illustrator:
+##
+##turn "pi" to pi symbol, italicize, move away from axis
+##italicize D in Tajima's D
+##italicize FST
+##italicize inversions
+##italicize gambiae and coluzzii in legends
+##
